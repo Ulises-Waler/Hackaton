@@ -1,31 +1,71 @@
-import { useState } from 'react';
-import { Hackaton2_backend } from 'declarations/Hackaton2_backend';
+import {Hackaton2_backend} from 'declarations/Hackaton2_backend'
+import React, { useState, useEffect } from 'react';
+import { Line } from 'react-chartjs-2';
+import Chart from 'chart.js/auto'; 
 
-function App() {
-  const [greeting, setGreeting] = useState('');
+const App = () => {
+  const [sensorData, setSensorData] = useState([]);
+  const [selectedMonth, setSelectedMonth] = useState('');
 
-  function handleSubmit(event) {
-    event.preventDefault();
-    const name = event.target.elements.name.value;
-    Hackaton2_backend.greet(name).then((greeting) => {
-      setGreeting(greeting);
-    });
-    return false;
-  }
+  useEffect(() => {
+    fetchSensorData('enero'); 
+  }, []);
+
+  const fetchSensorData = async (month) => {
+    try {
+      Hackaton2_backend.getSensorData(month).then(response=>{
+        setSensorData(response.data);
+      })
+    } catch (error) {
+      console.error('Error fetching sensor data:', error);
+    }
+  };
+
+  const handleMonthChange = (event) => {
+    const month = event.target.value.toLowerCase();
+    setSelectedMonth(month);
+    fetchSensorData(month);
+  };
+
+  useEffect(() => {
+    if (Chart && typeof Chart.registerScale === 'function') {
+      Chart.registerScale('linear', Chart.scaleService.getScaleConstructor('linear'));
+    }
+  }, []);
 
   return (
-    <main>
-      <img src="/logo2.svg" alt="DFINITY logo" />
-      <br />
-      <br />
-      <form action="#" onSubmit={handleSubmit}>
-        <label htmlFor="name">Enter your name: &nbsp;</label>
-        <input id="name" alt="Name" type="text" />
-        <button type="submit">Click Me!</button>
-      </form>
-      <section id="greeting">{greeting}</section>
-    </main>
+    
+    <center><div className="App">
+      <h1>Datos de los Sensores</h1>
+      <select value={selectedMonth} onChange={handleMonthChange}>
+        <option value="">Seleccionar Mes</option>
+        <option value="enero">Enero</option>
+        <option value="febrero">Febrero</option>
+      </select>
+      <div style={{ maxWidth: '800px', margin: '20px auto' }}>
+        <Line
+          data={{
+            labels: ['Sensor de Turbidez', 'Sensor de Conductividad', 'Sensor de PH', 'Sensor de Gases'],
+            datasets: sensorData.map((sensor, index) => ({
+              label: `Sensor ${index + 1}`,
+              data: sensor.data,
+              borderColor: sensor.borderColor,
+              borderWidth: sensor.borderWidth,
+              fill: false,
+            })),
+          }}
+          options={{
+            scales: {
+              y: {
+                type: 'linear', 
+                beginAtZero: true,
+              },
+            },
+          }}
+        />
+      </div>
+    </div></center>
   );
-}
+};
 
 export default App;
